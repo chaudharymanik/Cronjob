@@ -3,7 +3,6 @@ const fs = require('fs');
 const xml2js = require('xml2js');
 const mysql = require('mysql2/promise');
 
-// Database configuration
 const dbConfig = {
     host: 'localhost',
     user: 'root',
@@ -12,16 +11,15 @@ const dbConfig = {
     port: 3306
 };
 
-// Function to read and parse XML file
 async function readXMLFile() {
     try {
         const xmlData = fs.readFileSync('data.xml', 'utf8');
-        console.log('XML Data read:', xmlData); // Debug log
+        console.log('XML Data read:', xmlData);
         const parser = new xml2js.Parser({
             explicitArray: false
         });
         const result = await parser.parseStringPromise(xmlData);
-        console.log('Parsed XML result:', JSON.stringify(result, null, 2)); // Debug log
+        console.log('Parsed XML result:', JSON.stringify(result, null, 2));
         return result.products.product;
     } catch (error) {
         console.error('Error reading XML file:', error);
@@ -29,14 +27,12 @@ async function readXMLFile() {
     }
 }
 
-// Function to update database
 async function updateDatabase(products) {
     let connection;
     try {
         connection = await mysql.createConnection(dbConfig);
-        console.log('Database connected successfully'); // Debug log
+        console.log('Database connected successfully');
         
-        // Create table if it doesn't exist
         await connection.execute(`
             CREATE TABLE IF NOT EXISTS products (
                 id INT PRIMARY KEY,
@@ -46,18 +42,17 @@ async function updateDatabase(products) {
                 lastUpdated DATE
             )
         `);
-        console.log('Table created/verified successfully'); // Debug log
+        console.log('Table created/verified successfully');
 
-        // Update each product
         for (const product of products) {
-            console.log('Processing product:', product); // Debug log
+            console.log('Processing product:', product);
             const { id, name, price, stock, lastUpdated } = product;
             await connection.execute(
                 'INSERT INTO products (id, name, price, stock, lastUpdated) VALUES (?, ?, ?, ?, ?) ' +
                 'ON DUPLICATE KEY UPDATE name = ?, price = ?, stock = ?, lastUpdated = ?',
                 [id, name, price, stock, lastUpdated, name, price, stock, lastUpdated]
             );
-            console.log(`Product ${id} inserted/updated successfully`); // Debug log
+            console.log(`Product ${id} inserted/updated successfully`);
         }
         
         console.log('Database updated successfully');
@@ -71,12 +66,11 @@ async function updateDatabase(products) {
     }
 }
 
-// Main function to process XML and update database
 async function processXMLAndUpdateDB() {
     try {
         console.log('Starting XML processing and database update...');
         const products = await readXMLFile();
-        console.log('Products to be inserted:', products); // Debug log
+        console.log('Products to be inserted:', products);
         await updateDatabase(products);
         console.log('Process completed successfully');
     } catch (error) {
@@ -84,12 +78,10 @@ async function processXMLAndUpdateDB() {
     }
 }
 
-// Schedule the cron job to run every hour
 cron.schedule('0 * * * *', () => {
     console.log('Running scheduled task...');
     processXMLAndUpdateDB();
 });
 
-// Run immediately on startup
 console.log('Starting application...');
 processXMLAndUpdateDB(); 
